@@ -60,6 +60,9 @@ mcp-server/
     └── test_utility.py
 ```
 
+The explicit `server/utility/__init__.py` ensures the module can be imported directly, e.g.
+`from server.utility.config import get_config`.
+
 ## Configuration
 
 Set the following environment variables. When using Docker Compose, these defaults are
