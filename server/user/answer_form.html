@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Agent escalation</title>
+    <link rel="stylesheet" href="{{ url_for('static_assets', filename='style.css') }}" />
+  </head>
+  <body>
+    <main class="container">
+      <header>
+        <h1>Agent escalation</h1>
+        <p class="subtitle">A coding agent needs a human decision.</p>
+      </header>
+
+      <section class="question-block">
+        <h2>Question</h2>
+        <p class="question-text">{{ record.question }}</p>
+      </section>
+
+      {% if message %}
+        <div class="notice">{{ message }}</div>
+      {% endif %}
+
+      {% if error %}
+        <div class="error">{{ error }}</div>
+      {% endif %}
+
+      {% if submitted and status == 'answered' %}
+        <div class="status status-answered">Answer submitted</div>
+      {% elif status == 'answered' %}
+        <div class="status status-answered">This question has already been answered.</div>
+      {% elif status == 'expired' %}
+        <div class="status status-expired">This question expired before a response was recorded.</div>
+      {% endif %}
+
+      {% if status == 'answered' or status == 'expired' %}
+        <section class="answer-preview">
+          <h2>Recorded reply</h2>
+          <p>{{ record.answer }}</p>
+        </section>
+      {% elif not submitted %}
+        <form method="post" class="answer-form">
+          {% if record.preset_answers %}
+            <fieldset>
+              <legend>Preset answers</legend>
+              {% for answer in record.preset_answers %}
+                <label class="option">
+                  <input type="radio" name="selected_answer" value="{{ answer }}" {% if request.form.selected_answer == answer %}checked{% endif %} />
+                  <span>{{ answer }}</span>
+                </label>
+              {% endfor %}
+            </fieldset>
+          {% endif %}
+
+          <label class="custom-answer">
+            Custom answer
+            <textarea
+              name="custom_answer"
+              rows="4"
+              placeholder="Provide a custom response if the presets are insufficient."
+            >{{ request.form.custom_answer }}</textarea>
+          </label>
+
+          <button type="submit" class="submit">Submit answer</button>
+        </form>
+      {% endif %}
+
+      <footer>
+        <p>Link security is enforced per question. Share this URL only with the intended reviewer.</p>
+      </footer>
+    </main>
+  </body>
+</html>

@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mcp-human-handoff-server"
+version = "0.1.0"
+description = "MCP server that lets coding agents hand questions to humans via a secure web workflow"
+readme = "README.md"
+authors = [{name = "MCP Maintainers"}]
+requires-python = ">=3.12"
+dependencies = [
+    "mcp>=1.14.1",
+    "flask>=3.1",
+    "requests>=2.32",
+    "python-dotenv>=1.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3",
+    "pytest-asyncio>=0.24",
+    "ruff>=0.6",
+]
+
+[tool.pytest.ini_options]
+addopts = "--maxfail=1 --disable-warnings"
+pythonpath = ["."]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "B", "I"]
+
