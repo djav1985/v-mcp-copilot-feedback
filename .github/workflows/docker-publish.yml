@@ -28,12 +28,17 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ secrets.DOCKERHUB_REPOSITORY }}
+          images: djav1985/v-mcp-copilot-feedback
           flavor: latest=false
           tags: |
+            # Tag main branch as :main
             type=raw,value=main,enable=${{ github.ref == 'refs/heads/main' }}
+            # Tag dev branch as :dev
             type=raw,value=dev,enable=${{ github.ref == 'refs/heads/dev' }}
+            # Tag commits with SHA
             type=sha,priority=100,enable=${{ github.event_name == 'push' }}
+            # Tag releases with their version
+            type=ref,event=tag
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
