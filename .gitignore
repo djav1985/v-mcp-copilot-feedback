@@ -117,6 +117,11 @@ dmypy.json
 .DS_Store
 Thumbs.db
 
+# Environment variables
+.env
+.env.local
+.env.production
+
 # Temporary files
 /tmp/
 
@@ -124,3 +129,6 @@ Thumbs.db
 test_cert.pem
 test_key.pem
 *.pem
+
+# SSL certificates directory
+certs/

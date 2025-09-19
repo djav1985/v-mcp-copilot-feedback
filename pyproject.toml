@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "v-mcp-vibecode-feedback"
-version = "1.0.0"
-description = "MCP Server that allows coding agents to ask you questions"
+version = "2.0.0"
+description = "REST API server for agent-human feedback with Pushover notifications"
 authors = [
     {name = "Vontainment", email = ""}
 ]
@@ -28,7 +28,7 @@ classifiers = [
 ]
 
 [project.scripts]
-vibecode-feedback-server = "mcp_server:main"
+vibecode-feedback-server = "feedback_server:main"
 
 [project.urls]
 "Homepage" = "https://github.com/djav1985/v-mcp-vibecode-feedback"
