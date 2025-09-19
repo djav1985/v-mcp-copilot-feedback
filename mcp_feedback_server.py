@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
-MCP Server for VibeCode Feedback using MCP Python SDK
+MCP-SDK Based Feedback Server with REST API Endpoints
+Built with the official MCP Python SDK while exposing REST API endpoints for agent interaction.
 Enables coding agents to hand off questions to humans for review and decision-making.
 """
 
@@ -13,7 +14,7 @@ from typing import Any, Dict, List, Optional
 from dataclasses import dataclass
 import logging
 
-# MCP SDK imports
+# MCP SDK imports (using as foundation)
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
 from mcp.types import (
@@ -23,7 +24,7 @@ from mcp.types import (
     CallToolResult,
 )
 
-# HTTP server for human interface
+# HTTP server for REST API endpoints
 from starlette.applications import Starlette
 from starlette.responses import HTMLResponse, JSONResponse, Response
 from starlette.routing import Route
@@ -50,8 +51,8 @@ class Question:
     reply: Optional[Dict[str, Any]] = None
     expired: bool = False
 
-class VibeCodeFeedbackServer:
-    """MCP Server for agent-human feedback with web interface."""
+class MCPFeedbackServer:
+    """MCP-SDK Based Server with REST API Endpoints for Agent-Human Feedback."""
     
     def __init__(self):
         self.questions: Dict[str, Question] = {}
@@ -60,114 +61,8 @@ class VibeCodeFeedbackServer:
         self.server_url = os.getenv('SERVER_URL', 'http://localhost:8080')
         self.ttl_seconds = int(os.getenv('TTL_SECONDS', '300'))
         
-        # Create MCP server instance
+        # Create MCP server instance (using SDK as foundation)
         self.mcp_server = Server("vibecode-feedback-server", version="2.0.0")
-        
-        # Register MCP tools
-        self.setup_mcp_tools()
-    
-    def setup_mcp_tools(self):
-        """Setup MCP tools using the Python SDK."""
-        
-        @self.mcp_server.call_tool()
-        async def ask_question(question: str, preset_answers: List[str]) -> List[TextContent]:
-            """Agent submits a question for human review."""
-            if not question or not question.strip():
-                return [TextContent(type="text", text="Error: Question text is required")]
-            
-            if not isinstance(preset_answers, list):
-                return [TextContent(type="text", text="Error: preset_answers must be a list")]
-            
-            # Generate IDs and create question
-            question_id = self.generate_question_id()
-            auth_key = self.generate_auth_key()
-            
-            question_obj = Question(
-                question_id=question_id,
-                auth_key=auth_key,
-                question=question.strip(),
-                preset_answers=preset_answers,
-                created_at=time.time(),
-                ttl_seconds=self.ttl_seconds
-            )
-            
-            self.questions[question_id] = question_obj
-            
-            # Send Pushover notification
-            await self.send_pushover_notification(question_obj)
-            
-            reply_endpoint = f"/get_reply/{auth_key}/{question_id}"
-            
-            response_data = {
-                "question_id": question_id,
-                "status": "pending",
-                "poll_interval_seconds": 30,
-                "reply_endpoint": reply_endpoint,
-                "poll_instructions": "Poll this endpoint every 30 seconds for the answer."
-            }
-            
-            return [TextContent(type="text", text=json.dumps(response_data))]
-        
-        @self.mcp_server.call_tool()
-        async def get_reply(auth_key: str, question_id: str) -> List[TextContent]:
-            """Agent polls for the human's reply."""
-            question = self.questions.get(question_id)
-            if not question or question.auth_key != auth_key:
-                return [TextContent(type="text", text="Error: Question not found or invalid auth key")]
-            
-            reply_endpoint = f"/get_reply/{auth_key}/{question_id}"
-            
-            if question.answered:
-                response_data = {
-                    "answered": True,
-                    "reply": question.reply
-                }
-            else:
-                response_data = {
-                    "answered": False,
-                    "status": "pending",
-                    "poll_interval_seconds": 30,
-                    "poll_instructions": "Poll this endpoint every 30 seconds for the answer.",
-                    "reply_endpoint": reply_endpoint
-                }
-            
-            return [TextContent(type="text", text=json.dumps(response_data))]
-        
-        # Set tool schemas explicitly
-        ask_question.name = "ask_question"
-        ask_question.description = "Submit a question for human review"
-        ask_question.inputSchema = {
-            "type": "object",
-            "properties": {
-                "question": {
-                    "type": "string",
-                    "description": "The question to ask the human"
-                },
-                "preset_answers": {
-                    "type": "array",
-                    "items": {"type": "string"},
-                    "description": "List of preset answer options"
-                }
-            },
-            "required": ["question", "preset_answers"]
-        }
-        
-        get_reply.name = "get_reply"  
-        get_reply.description = "Poll for the human's reply to a question"
-        get_reply.inputSchema = {
-            "type": "object",
-            "properties": {
-                "auth_key": {
-                    "type": "string", 
-                    "description": "Authentication key for the question"
-                },
-                "question_id": {
-                    "type": "string",
-                    "description": "Unique identifier for the question"
-                }
-            },
-            "required": ["auth_key", "question_id"]
-        }
     
     def generate_question_id(self) -> str:
         """Generate a unique question ID."""
@@ -207,8 +102,98 @@ class VibeCodeFeedbackServer:
         except Exception as e:
             logger.error(f"Error sending Pushover notification: {e}")
 
-# Global server instance
-feedback_server = VibeCodeFeedbackServer()
+# Global server instance (built with MCP SDK foundation)
+feedback_server = MCPFeedbackServer()
+
+# REST API Endpoints (as specified by user)
+async def ask_question(request):
+    """POST /ask_question - Agent submits a question for human review."""
+    try:
+        data = await request.json()
+        question_text = data.get('question', '').strip()
+        preset_answers = data.get('preset_answers', [])
+        
+        if not question_text:
+            return JSONResponse({
+                'error': 'Question text is required'
+            }, status_code=400)
+        
+        if not isinstance(preset_answers, list):
+            return JSONResponse({
+                'error': 'preset_answers must be a list'
+            }, status_code=400)
+        
+        # Generate IDs and create question
+        question_id = feedback_server.generate_question_id()
+        auth_key = feedback_server.generate_auth_key()
+        
+        question = Question(
+            question_id=question_id,
+            auth_key=auth_key,
+            question=question_text,
+            preset_answers=preset_answers,
+            created_at=time.time(),
+            ttl_seconds=feedback_server.ttl_seconds
+        )
+        
+        feedback_server.questions[question_id] = question
+        
+        # Send Pushover notification
+        await feedback_server.send_pushover_notification(question)
+        
+        reply_endpoint = f"/get_reply/{auth_key}/{question_id}"
+        
+        return JSONResponse({
+            'question_id': question_id,
+            'status': 'pending',
+            'poll_interval_seconds': 30,
+            'reply_endpoint': reply_endpoint,
+            'poll_instructions': 'Poll this endpoint every 30 seconds for the answer.'
+        })
+        
+    except json.JSONDecodeError:
+        return JSONResponse({
+            'error': 'Invalid JSON in request body'
+        }, status_code=400)
+    except Exception as e:
+        logger.error(f"Error in ask_question: {e}")
+        return JSONResponse({
+            'error': 'Internal server error'
+        }, status_code=500)
+
+async def get_reply(request):
+    """GET /get_reply/{auth_key}/{question_id} - Agent polls for the human's reply."""
+    try:
+        auth_key = request.path_params['auth_key']
+        question_id = request.path_params['question_id']
+        
+        question = feedback_server.questions.get(question_id)
+        if not question or question.auth_key != auth_key:
+            return JSONResponse({
+                'error': 'Question not found or invalid auth key'
+            }, status_code=404)
+        
+        reply_endpoint = f"/get_reply/{auth_key}/{question_id}"
+        
+        if question.answered:
+            return JSONResponse({
+                'answered': True,
+                'reply': question.reply
+            })
+        else:
+            return JSONResponse({
+                'answered': False,
+                'status': 'pending',
+                'poll_interval_seconds': 30,
+                'poll_instructions': 'Poll this endpoint every 30 seconds for the answer.',
+                'reply_endpoint': reply_endpoint
+            })
+            
+    except Exception as e:
+        logger.error(f"Error in get_reply: {e}")
+        return JSONResponse({
+            'error': 'Internal server error'
+        }, status_code=500)
 
 # Human-facing web interface endpoints
 async def answer_question_get(request):
@@ -453,51 +438,20 @@ async def health_check(request):
         "questions_count": len(feedback_server.questions)
     })
 
-# Create Starlette app for human interface
-web_app = Starlette(routes=[
+# Create Starlette app with REST API endpoints
+app = Starlette(routes=[
+    # Agent-facing REST API endpoints (as specified by user)
+    Route('/ask_question', ask_question, methods=["POST"]),
+    Route('/get_reply/{auth_key}/{question_id}', get_reply, methods=["GET"]),
+    
+    # Human-facing endpoints
     Route('/answer_question/{auth_key}/{question_id}', answer_question_get, methods=["GET"]),
     Route('/answer_question/{auth_key}/{question_id}', answer_question_post, methods=["POST"]),
+    
+    # Health check
     Route('/health', health_check),
     Route('/', health_check),
 ])
-
-async def run_web_server():
-    """Run the web server for human interface."""
-    port = int(os.getenv('PORT', '8080'))
-    host = os.getenv('HOST', '0.0.0.0')
-    
-    config = uvicorn.Config(
-        web_app,
-        host=host,
-        port=port,
-        log_level="info"
-    )
-    
-    server = uvicorn.Server(config)
-    logger.info(f"Starting web server on {host}:{port}")
-    await server.serve()
-
-async def main():
-    """Main entry point - runs both MCP server and web interface."""
-    # Start cleanup task
-    cleanup_task = asyncio.create_task(cleanup_expired_questions())
-    
-    # Start web server in background
-    web_task = asyncio.create_task(run_web_server())
-    
-    # Run MCP server on stdio
-    logger.info("Starting MCP server on stdio...")
-    try:
-        async with stdio_server(feedback_server.mcp_server) as (read_stream, write_stream):
-            await feedback_server.mcp_server.run(
-                read_stream,
-                write_stream,
-                feedback_server.mcp_server.create_initialization_options()
-            )
-    except KeyboardInterrupt:
-        logger.info("Server shutting down...")
-        cleanup_task.cancel()
-        web_task.cancel()
 
 async def cleanup_expired_questions():
     """Periodically clean up expired questions."""
@@ -530,6 +484,43 @@ async def cleanup_expired_questions():
         except Exception as e:
             logger.error(f"Error in cleanup task: {e}")
             await asyncio.sleep(60)  # Wait longer on error
+
+async def main():
+    """Main entry point - runs REST API server built with MCP SDK foundation."""
+    # Start cleanup task
+    cleanup_task = asyncio.create_task(cleanup_expired_questions())
+    
+    # Get configuration
+    port = int(os.getenv('PORT', '8080'))
+    host = os.getenv('HOST', '0.0.0.0')
+    
+    logger.info("Starting MCP-SDK based Feedback Server with REST API endpoints...")
+    logger.info(f"Agent endpoints:")
+    logger.info(f"  - POST http://{host}:{port}/ask_question")
+    logger.info(f"  - GET  http://{host}:{port}/get_reply/{{auth_key}}/{{question_id}}")
+    logger.info(f"Human endpoints:")
+    logger.info(f"  - GET/POST http://{host}:{port}/answer_question/{{auth_key}}/{{question_id}}")
+    logger.info(f"Health check:")
+    logger.info(f"  - GET http://{host}:{port}/health")
+    
+    if not feedback_server.pushover_token or not feedback_server.pushover_user:
+        logger.warning("Pushover not configured - set PUSHOVER_TOKEN and PUSHOVER_USER env vars")
+    
+    # Configure and start server
+    config = uvicorn.Config(
+        app,
+        host=host,
+        port=port,
+        log_level="info"
+    )
+    
+    server = uvicorn.Server(config)
+    
+    try:
+        await server.serve()
+    except KeyboardInterrupt:
+        logger.info("Server shutting down...")
+        cleanup_task.cancel()
 
 if __name__ == "__main__":
     asyncio.run(main())
