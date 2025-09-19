@@ -62,7 +62,8 @@ mcp-server/
 
 ## Configuration
 
-Set the following environment variables (use a `.env` file locally):
+Set the following environment variables. When using Docker Compose, these defaults are
+defined inline, but you can override them or provide a `.env` file for local development:
 
 | Variable | Description | Default |
 | --- | --- | --- |
@@ -113,7 +114,9 @@ docker compose up --build
 ```
 
 This launches the MCP transport alongside the Flask UI in a single container. Expose the HTTP
-endpoints internally or terminate TLS at an upstream proxy for production deployments.
+endpoints internally or terminate TLS at an upstream proxy for production deployments. The Compose
+file now ships with sensible defaults for every runtime variable, so you can start the stack without
+maintaining a separate `.env` file.
 
 ## MCP Workflow Summary
 

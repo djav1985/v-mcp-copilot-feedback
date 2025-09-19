@@ -8,6 +8,13 @@ services:
       SERVER_URL: "http://localhost:8000"
       MCP_API_KEY: "change-me"
       MCP_TRANSPORT: "streamable-http"
-    env_file:
-      - .env
+      FLASK_HOST: "0.0.0.0"
+      FLASK_PORT: "8000"
+      MCP_HOST: "0.0.0.0"
+      MCP_PORT: "8765"
+      QUESTION_TTL_SECONDS: "300"
+      POLL_INTERVAL_SECONDS: "30"
+      FALLBACK_ANSWER: "Sorry, no human could be reached. Please use your best judgment."
+      PUSHOVER_TOKEN: ""
+      PUSHOVER_USER: ""
     restart: unless-stopped
