@@ -1,0 +1,13 @@
+services:
+  mcp-server:
+    build: .
+    ports:
+      - "8000:8000"
+      - "8765:8765"
+    environment:
+      SERVER_URL: "http://localhost:8000"
+      MCP_API_KEY: "change-me"
+      MCP_TRANSPORT: "streamable-http"
+    env_file:
+      - .env
+    restart: unless-stopped
