@@ -3,6 +3,7 @@
 ## [Unreleased]
 ### Changed
 - Inlined Docker Compose environment configuration so the stack runs without a `.env` file.
+- Added an explicit `server.utility` package initializer to guarantee direct imports succeed.
 
 ## [0.1.0] - 2025-02-14
 ### Added
