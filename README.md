@@ -121,6 +121,28 @@ endpoints internally or terminate TLS at an upstream proxy for production deploy
 file now ships with sensible defaults for every runtime variable, so you can start the stack without
 maintaining a separate `.env` file.
 
+## Docker Image Publishing
+
+GitHub Actions automation in [`.github/workflows/docker-publish.yml`](.github/workflows/docker-publish.yml)
+builds the project image and, when appropriate, pushes it to Docker Hub. The workflow:
+
+* Runs on pull requests targeting `main` or `dev` to ensure Docker changes build cleanly.
+* Publishes images for pushes to the `main` and `dev` branches.
+* Tags each published image with the branch name (for example, `main` or `dev`) and the commit SHA—no
+  rolling `latest` tag is produced.
+
+To enable publishing, configure the following repository secrets with your Docker Hub credentials:
+
+| Secret | Purpose |
+| --- | --- |
+| `DOCKERHUB_USERNAME` | Docker Hub username or organization name. |
+| `DOCKERHUB_TOKEN` | Access token or password with permission to push images. |
+| `DOCKERHUB_REPOSITORY` | Target repository in `username/image` format. |
+
+After the secrets are set, pushes to `main` or `dev` automatically update the Docker Hub image. You
+can also trigger the workflow manually from the GitHub Actions tab to produce ad-hoc builds from
+either branch.
+
 ## MCP Workflow Summary
 
 1. **Agent calls `ask_question`** – The tool generates a `question_id` and `auth_key`, stores the
