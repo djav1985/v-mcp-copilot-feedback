@@ -1,0 +1,3 @@
+# VibeCode Feedback MCP Server Dependencies
+# No external dependencies required - uses only Python standard library
+# Python 3.8+ required for asyncio and dataclass features
