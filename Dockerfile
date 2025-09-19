@@ -7,7 +7,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
-COPY feedback_server.py .
+COPY mcp_feedback_server.py .
 
 # Create non-root user
 RUN useradd --create-home --shell /bin/bash app && \
@@ -22,4 +22,4 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8080/health || exit 1
 
 # Run the application
-CMD ["python", "feedback_server.py", "--host", "0.0.0.0"]
+CMD ["python", "mcp_feedback_server.py"]
