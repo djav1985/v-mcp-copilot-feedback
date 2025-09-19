@@ -28,7 +28,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: djav1985/v-mcp-copilot-feedback
+          images: vontainment/v-mcp-copilot-feedback
           flavor: latest=false
           tags: |
             # Tag main branch as :main
