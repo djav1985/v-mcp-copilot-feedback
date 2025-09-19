@@ -7,6 +7,9 @@ Allows coding agents to ask users questions and get feedback.
 import asyncio
 import json
 import sys
+import ssl
+import argparse
+from aiohttp import web, web_request
 from typing import Any, Dict, List, Optional, Sequence
 from dataclasses import dataclass
 import logging
@@ -329,9 +332,30 @@ class MCPServer:
         }
 
 async def main():
-    """Main server loop."""
+    """Main server entry point."""
+    parser = argparse.ArgumentParser(description='VibeCode Feedback MCP Server')
+    parser.add_argument('--mode', choices=['stdio', 'http', 'https'], default='stdio',
+                       help='Server mode: stdio (default), http, or https')
+    parser.add_argument('--host', default='localhost', 
+                       help='Host to bind to (default: localhost)')
+    parser.add_argument('--port', type=int, default=8080,
+                       help='Port to bind to (default: 8080)')
+    parser.add_argument('--cert', help='Path to SSL certificate file (required for https)')
+    parser.add_argument('--key', help='Path to SSL private key file (required for https)')
+    
+    args = parser.parse_args()
+    
     server = MCPServer()
     logger.info("VibeCode Feedback MCP Server starting...")
+    
+    if args.mode == 'stdio':
+        await run_stdio_server(server)
+    elif args.mode in ['http', 'https']:
+        await run_http_server(server, args)
+    
+async def run_stdio_server(server: 'MCPServer'):
+    """Run the server in stdio mode (original implementation)."""
+    logger.info("Running in stdio mode...")
     
     # Read from stdin and write to stdout for MCP communication
     while True:
@@ -361,6 +385,110 @@ async def main():
         except Exception as e:
             logger.error(f"Unexpected error: {e}")
             break
+
+async def run_http_server(server: 'MCPServer', args):
+    """Run the server in HTTP/HTTPS mode."""
+    is_https = args.mode == 'https'
+    protocol = 'HTTPS' if is_https else 'HTTP'
+    
+    logger.info(f"Running in {protocol} mode on {args.host}:{args.port}")
+    
+    if is_https and (not args.cert or not args.key):
+        logger.error("SSL certificate and key are required for HTTPS mode")
+        sys.exit(1)
+    
+    app = web.Application()
+    app.router.add_post('/mcp', lambda request: handle_http_request(server, request))
+    app.router.add_get('/', handle_health_check)
+    app.router.add_get('/health', handle_health_check)
+    
+    # Create SSL context for HTTPS
+    ssl_context = None
+    if is_https:
+        ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+        ssl_context.load_cert_chain(args.cert, args.key)
+        logger.info(f"SSL context created with certificate: {args.cert}")
+    
+    runner = web.AppRunner(app)
+    await runner.setup()
+    
+    site = web.TCPSite(runner, args.host, args.port, ssl_context=ssl_context)
+    await site.start()
+    
+    logger.info(f"MCP Server running on {protocol.lower()}://{args.host}:{args.port}")
+    logger.info("Endpoints:")
+    logger.info(f"  - POST {protocol.lower()}://{args.host}:{args.port}/mcp (MCP JSON-RPC)")
+    logger.info(f"  - GET {protocol.lower()}://{args.host}:{args.port}/health (Health check)")
+    
+    # Keep the server running
+    try:
+        await asyncio.Event().wait()  # Wait forever
+    except KeyboardInterrupt:
+        logger.info("Server shutting down...")
+    finally:
+        await runner.cleanup()
+
+async def handle_http_request(server: 'MCPServer', request: web_request.Request) -> web.Response:
+    """Handle HTTP requests for MCP JSON-RPC."""
+    try:
+        # Ensure it's a POST request with JSON content
+        if request.method != 'POST':
+            return web.Response(
+                status=405,
+                text='Method Not Allowed. Use POST.',
+                headers={'Allow': 'POST'}
+            )
+        
+        content_type = request.headers.get('Content-Type', '')
+        if not content_type.startswith('application/json'):
+            return web.Response(
+                status=400,
+                text='Bad Request. Content-Type must be application/json.'
+            )
+        
+        # Parse JSON request body
+        try:
+            json_data = await request.json()
+        except json.JSONDecodeError as e:
+            logger.error(f"Invalid JSON in request: {e}")
+            return web.Response(
+                status=400,
+                text=f'Bad Request. Invalid JSON: {str(e)}'
+            )
+        
+        # Handle the MCP request
+        response_data = await server.handle_request(json_data)
+        
+        # Return JSON response
+        return web.Response(
+            text=json.dumps(response_data),
+            content_type='application/json',
+            headers={
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'POST, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type',
+            }
+        )
+        
+    except Exception as e:
+        logger.error(f"Error handling HTTP request: {e}")
+        error_response = server.error_response(None, -32603, f"Internal server error: {str(e)}")
+        return web.Response(
+            text=json.dumps(error_response),
+            content_type='application/json',
+            status=500
+        )
+
+async def handle_health_check(request: web_request.Request) -> web.Response:
+    """Handle health check requests."""
+    return web.Response(
+        text=json.dumps({
+            "status": "healthy",
+            "service": "vibecode-feedback-mcp-server",
+            "version": "1.0.0"
+        }),
+        content_type='application/json'
+    )
 
 if __name__ == "__main__":
     asyncio.run(main())

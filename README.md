@@ -45,24 +45,70 @@ git clone https://github.com/djav1985/v-mcp-vibecode-feedback.git
 cd v-mcp-vibecode-feedback
 ```
 
-2. The server uses only Python standard library, so no additional dependencies are required. Python 3.8+ is required.
+2. Install dependencies:
+```bash
+pip3 install -r requirements.txt
+```
+
+The server requires Python 3.8+ and the aiohttp library for HTTP/HTTPS functionality.
 
 ## Usage
 
 ### Running the Server
 
-Start the MCP server:
+The server supports three modes of operation:
+
+#### 1. stdio Mode (Default - MCP Standard)
+Start the MCP server in stdio mode for use with MCP clients:
 ```bash
 python3 mcp_server.py
 ```
 
-The server will listen for JSON-RPC requests on stdin and respond on stdout, following the MCP protocol.
+#### 2. HTTP Mode  
+Start the server with HTTP transport:
+```bash
+python3 mcp_server.py --mode http --host localhost --port 8080
+```
+
+#### 3. HTTPS Mode
+Start the server with HTTPS transport (requires SSL certificate):
+```bash
+python3 mcp_server.py --mode https --host localhost --port 8443 --cert /path/to/cert.pem --key /path/to/key.pem
+```
+
+**Command Line Options:**
+- `--mode`: Server mode (`stdio`, `http`, or `https`) - default: `stdio`
+- `--host`: Host to bind to - default: `localhost`  
+- `--port`: Port to bind to - default: `8080`
+- `--cert`: Path to SSL certificate file (required for https mode)
+- `--key`: Path to SSL private key file (required for https mode)
+
+**HTTP/HTTPS Endpoints:**
+- `POST /mcp`: MCP JSON-RPC endpoint
+- `GET /health`: Health check endpoint
 
 ### Testing
 
 Run the test suite to verify functionality:
+
+**Test stdio mode:**
 ```bash
 python3 test_mcp_server.py
+python3 test_integration.py
+```
+
+**Test HTTP mode:**
+```bash
+python3 test_http_server.py
+```
+
+**Test HTTPS mode (requires SSL certificates):**
+```bash
+# Generate test certificates
+openssl req -x509 -newkey rsa:2048 -keyout test_key.pem -out test_cert.pem -days 365 -nodes -subj "/CN=localhost"
+
+# Run HTTPS tests
+python3 test_https_server.py
 ```
 
 Run the example demo to see how the server works:
@@ -72,9 +118,12 @@ python3 example_usage.py
 
 ### Integration with MCP Clients
 
-The server implements the MCP protocol and can be integrated with any MCP-compatible client. Example configuration for popular MCP clients:
+The server implements the MCP protocol and can be integrated with any MCP-compatible client.
 
-#### Claude Desktop
+#### stdio Mode (Standard MCP)
+Example configuration for popular MCP clients:
+
+**Claude Desktop**
 Add to your `claude_desktop_config.json`:
 ```json
 {
@@ -85,6 +134,38 @@ Add to your `claude_desktop_config.json`:
     }
   }
 }
+```
+
+#### HTTP/HTTPS Mode
+For HTTP/HTTPS integration, clients can send JSON-RPC requests to the server endpoints:
+
+**HTTP Example:**
+```bash
+curl -X POST http://localhost:8080/mcp \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "tools/list",
+    "params": {}
+  }'
+```
+
+**HTTPS Example:**
+```bash
+curl -X POST https://localhost:8443/mcp \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "initialize",
+    "params": {
+      "protocolVersion": "2024-11-05",
+      "capabilities": {},
+      "clientInfo": {"name": "my-client", "version": "1.0.0"}
+    }
+  }' \
+  --insecure
 ```
 
 #### Generic MCP Client
@@ -140,7 +221,8 @@ The server responds to standard MCP methods:
 
 ### Requirements
 - Python 3.8 or higher
-- No external dependencies (uses standard library only)
+- aiohttp>=3.8.0 (for HTTP/HTTPS support)
+- SSL certificate and private key (for HTTPS mode)
 
 ## License
 

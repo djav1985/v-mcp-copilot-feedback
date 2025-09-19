@@ -119,3 +119,8 @@ Thumbs.db
 
 # Temporary files
 /tmp/
+
+# Test SSL certificates (should not be committed)
+test_cert.pem
+test_key.pem
+*.pem
