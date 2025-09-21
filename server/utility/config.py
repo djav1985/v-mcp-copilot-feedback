@@ -42,13 +42,33 @@ def get_config() -> Config:
     pushover_user = os.getenv("PUSHOVER_USER")
     server_url = os.getenv("SERVER_URL", "http://localhost:8000").rstrip("/")
     api_key = os.getenv("MCP_API_KEY", "")
-    ttl = int(os.getenv("QUESTION_TTL_SECONDS", DEFAULT_TTL_SECONDS))
-    poll_interval = int(os.getenv("POLL_INTERVAL_SECONDS", DEFAULT_POLL_INTERVAL))
+    
+    # Safe integer parsing with fallbacks
+    try:
+        ttl = int(os.getenv("QUESTION_TTL_SECONDS", str(DEFAULT_TTL_SECONDS)))
+    except ValueError:
+        ttl = DEFAULT_TTL_SECONDS
+    
+    try:
+        poll_interval = int(os.getenv("POLL_INTERVAL_SECONDS", str(DEFAULT_POLL_INTERVAL)))
+    except ValueError:
+        poll_interval = DEFAULT_POLL_INTERVAL
+    
     fallback_answer = os.getenv("FALLBACK_ANSWER", DEFAULT_FALLBACK)
     flask_host = os.getenv("FLASK_HOST", "0.0.0.0")
-    flask_port = int(os.getenv("FLASK_PORT", "8000"))
+    
+    try:
+        flask_port = int(os.getenv("FLASK_PORT", "8000"))
+    except ValueError:
+        flask_port = 8000
+        
     mcp_host = os.getenv("MCP_HOST", "0.0.0.0")
-    mcp_port = int(os.getenv("MCP_PORT", "8765"))
+    
+    try:
+        mcp_port = int(os.getenv("MCP_PORT", "8765"))
+    except ValueError:
+        mcp_port = 8765
+        
     mcp_transport = os.getenv("MCP_TRANSPORT", "streamable-http")
 
     return Config(
@@ -92,9 +112,6 @@ def _extract_header(headers: Any, name: str) -> str | None:
         except TypeError:
             return None
 
-    if isinstance(headers, dict):
-        return headers.get(name)
-
     return None
 
 
@@ -119,6 +136,7 @@ def extract_api_key_from_context(ctx: Any | None) -> str | None:
     if headers is None:
         return None
 
+    # Try both possible header name variations
     return _extract_header(headers, "X-API-Key") or _extract_header(headers, "x-api-key")
 
 

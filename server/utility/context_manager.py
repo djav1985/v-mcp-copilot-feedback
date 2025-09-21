@@ -121,11 +121,7 @@ class QuestionContextManager:
         now: datetime | None = None,
     ) -> None:
         now = now or datetime.now(timezone.utc)
-        if record.expired:
-            return
-        if record.is_answered():
-            return
-        if record.has_expired(now):
+        if not record.expired and not record.is_answered() and record.has_expired(now):
             record.mark_expired(fallback_answer, now)
 
     def answer_question(
@@ -140,11 +136,8 @@ class QuestionContextManager:
         with self._lock:
             record = self.require_authorized_question(question_id, auth_key)
             self.ensure_ttl_state(record, fallback_answer, now)
-            if record.expired:
-                return record
-            if record.is_answered():
-                return record
-            record.mark_answer(answer, now)
+            if not record.expired and not record.is_answered():
+                record.mark_answer(answer, now)
             return record
 
     def get_authorized_question_with_ttl(
@@ -167,10 +160,13 @@ class QuestionContextManager:
             self._records.pop(question_id, None)
 
 
-_default_manager = QuestionContextManager(get_config().question_ttl_seconds)
+_default_manager: QuestionContextManager | None = None
 
 
 def get_question_manager() -> QuestionContextManager:
+    global _default_manager
+    if _default_manager is None:
+        _default_manager = QuestionContextManager(get_config().question_ttl_seconds)
     return _default_manager
 
 

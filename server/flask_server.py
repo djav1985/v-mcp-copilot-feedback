@@ -64,7 +64,7 @@ def answer_question(auth_key: str, question_id: str) -> Any:
         if custom_answer:
             chosen_answer = custom_answer
         elif selected_answer:
-            chosen_answer = selected_answer
+            chosen_answer = selected_answer.strip()
         else:
             error = "Please choose a preset answer or provide a custom response."
             return render_template(
@@ -77,7 +77,7 @@ def answer_question(auth_key: str, question_id: str) -> Any:
         record = manager.answer_question(
             question_id=question_id,
             auth_key=auth_key,
-            answer=chosen_answer.strip(),
+            answer=chosen_answer,
             fallback_answer=config.fallback_answer,
         )
         submitted = True
