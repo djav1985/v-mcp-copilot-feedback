@@ -8,6 +8,7 @@ from typing import Any
 
 from mcp.server.fastmcp.server import Context
 
+from server.tools.polling import build_poll_metadata
 from server.utility.config import get_config, require_api_key
 from server.utility.context_manager import (
     QuestionAccessError,
@@ -17,18 +18,12 @@ from server.utility.context_manager import (
 
 logger = logging.getLogger(__name__)
 
-POLL_INSTRUCTIONS_TEMPLATE = "Poll the reply resource every {seconds} seconds for the answer."
-RESOURCE_TEMPLATE = "resource://get_reply/{question_id}/{auth_key}"
-
 
 def _pending_payload(poll_interval: int) -> dict[str, Any]:
     return {
         "answered": False,
         "status": "pending",
-        "poll_interval_seconds": poll_interval,
-        "poll_instructions": POLL_INSTRUCTIONS_TEMPLATE.format(seconds=poll_interval),
-        "reply_tool": "get_reply",
-        "reply_resource_template": RESOURCE_TEMPLATE,
+        **build_poll_metadata(poll_interval),
     }
 
 
@@ -68,8 +63,5 @@ def get_reply(
         "reply": {"answer": record.answer or config.fallback_answer},
     }
 
-    logger.info(
-        "Returning %s reply for question %s", status, record.question_id
-    )
+    logger.info("Returning %s reply for question %s", status, record.question_id)
     return reply_payload
-

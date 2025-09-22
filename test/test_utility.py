@@ -42,6 +42,22 @@ def test_question_manager_expiration() -> None:
     assert record.answer == "fallback"
 
 
+def test_question_manager_zero_ttl_expires_immediately() -> None:
+    manager = QuestionContextManager(default_ttl_seconds=60)
+    record = manager.create_question("Zero TTL?", ["Yes"], ttl_seconds=0)
+
+    assert record.ttl_seconds == 0
+
+    manager.ensure_ttl_state(
+        record,
+        fallback_answer="fallback",
+        now=record.created_at,
+    )
+
+    assert record.expired is True
+    assert record.answer == "fallback"
+
+
 def test_pushover_skipped_without_credentials(monkeypatch: pytest.MonkeyPatch) -> None:
     config = config_module.Config(
         pushover_token=None,
@@ -100,4 +116,3 @@ def test_extract_api_key_from_context(api_context) -> None:
         request_context=SimpleNamespace(request=SimpleNamespace(headers={}))
     )
     assert config_module.extract_api_key_from_context(ctx_missing) is None
-

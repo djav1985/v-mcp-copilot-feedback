@@ -7,13 +7,12 @@ from typing import Any, List
 
 from mcp.server.fastmcp.server import Context
 
+from server.tools.polling import build_poll_metadata
 from server.utility.config import get_config, require_api_key
 from server.utility.context_manager import get_question_manager
 from server.utility.pushover import send_question_notification
 
 logger = logging.getLogger(__name__)
-
-POLL_INSTRUCTIONS_TEMPLATE = "Poll the reply resource every {seconds} seconds for the answer."
 
 
 def _sanitize_preset_answers(preset_answers: List[str] | None) -> List[str]:
@@ -54,18 +53,12 @@ def ask_question(
         notification_sent,
     )
 
-    poll_instructions = POLL_INSTRUCTIONS_TEMPLATE.format(
-        seconds=config.poll_interval_seconds
-    )
+    poll_metadata = build_poll_metadata(config.poll_interval_seconds)
 
     return {
+        **poll_metadata,
         "question_id": record.question_id,
         "auth_key": record.auth_key,
         "status": "pending",
-        "poll_interval_seconds": config.poll_interval_seconds,
-        "poll_instructions": poll_instructions,
-        "reply_tool": "get_reply",
-        "reply_resource_template": "resource://get_reply/{question_id}/{auth_key}",
-        "expires_in_seconds": config.question_ttl_seconds,
+        "expires_in_seconds": record.ttl_seconds,
     }
-
