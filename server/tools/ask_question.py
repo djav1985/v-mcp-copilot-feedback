@@ -29,6 +29,7 @@ def _sanitize_preset_answers(preset_answers: List[str] | None) -> List[str]:
 def ask_question(
     question: str,
     preset_answers: List[str] | None = None,
+    ttl_seconds: int | None = None,
     ctx: Context | None = None,
 ) -> dict[str, Any]:
     """Register a question for human review and notify the reviewer."""
@@ -43,7 +44,7 @@ def ask_question(
     record = manager.create_question(
         question=question.strip(),
         preset_answers=_sanitize_preset_answers(preset_answers),
-        ttl_seconds=config.question_ttl_seconds,
+        ttl_seconds=ttl_seconds if ttl_seconds is not None else config.question_ttl_seconds,
     )
 
     notification_sent = send_question_notification(config, record)
