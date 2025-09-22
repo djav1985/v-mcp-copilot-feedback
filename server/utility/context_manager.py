@@ -92,7 +92,7 @@ class QuestionContextManager:
             auth_key=secrets.token_urlsafe(32),
             question=question,
             preset_answers=list(preset_answers or []),
-            ttl_seconds=ttl_seconds or self._default_ttl_seconds,
+            ttl_seconds=self._default_ttl_seconds if ttl_seconds is None else ttl_seconds,
         )
         with self._lock:
             self._records[record.question_id] = record
@@ -173,4 +173,3 @@ def get_question_manager() -> QuestionContextManager:
 def set_question_manager(manager: QuestionContextManager) -> None:
     global _default_manager
     _default_manager = manager
-

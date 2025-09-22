@@ -23,6 +23,10 @@ and is designed to run locally via Docker Compose or in production with HTTPS en
   review link for the human reviewer.
 * **In-memory TTL storage** – Questions and answers are maintained in memory with per-question
   expiry and immutable replies.
+* **Configurable TTL overrides** – Individual questions can customize their TTL (including
+  zero-second expirations) for tight workflows and testing scenarios.
+* **Consistent polling metadata** – Shared helpers keep MCP poll instructions and reply templates
+  aligned between tools and resources.
 
 ## Project Structure
 
