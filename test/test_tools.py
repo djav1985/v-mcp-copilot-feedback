@@ -103,3 +103,116 @@ def test_invalid_api_key_rejected(monkeypatch: pytest.MonkeyPatch, api_context) 
             ctx=api_context(api_key="invalid"),
         )
 
+
+def test_ask_question_with_custom_ttl(monkeypatch: pytest.MonkeyPatch, api_context) -> None:
+    """Test that ask_question accepts and respects custom TTL parameter."""
+    captured = {}
+
+    def fake_notify(config, record):
+        captured["record"] = record
+        return True
+
+    ask_module = importlib.import_module("server.tools.ask_question")
+    monkeypatch.setattr(ask_module, "send_question_notification", fake_notify)
+
+    # Test with custom TTL
+    result = ask_question(
+        question="Question with custom TTL?",
+        preset_answers=["Yes", "No"],
+        ttl_seconds=42,
+        ctx=api_context(),
+    )
+
+    assert result["expires_in_seconds"] == 42
+    
+    record = get_question_manager().get_question(result["question_id"])
+    assert record is not None
+    assert record.ttl_seconds == 42
+    assert captured["record"].ttl_seconds == 42
+
+
+def test_ask_question_with_zero_ttl(monkeypatch: pytest.MonkeyPatch, api_context) -> None:
+    """Test that ask_question accepts zero TTL for immediate expiry."""
+    captured = {}
+
+    def fake_notify(config, record):
+        captured["record"] = record
+        return True
+
+    ask_module = importlib.import_module("server.tools.ask_question")
+    monkeypatch.setattr(ask_module, "send_question_notification", fake_notify)
+
+    # Test with zero TTL
+    result = ask_question(
+        question="Question with zero TTL?",
+        preset_answers=["Yes"],
+        ttl_seconds=0,
+        ctx=api_context(),
+    )
+
+    assert result["expires_in_seconds"] == 0
+    
+    record = get_question_manager().get_question(result["question_id"])
+    assert record is not None
+    assert record.ttl_seconds == 0
+    assert captured["record"].ttl_seconds == 0
+
+
+def test_ask_question_with_none_ttl_uses_default(
+    monkeypatch: pytest.MonkeyPatch, api_context
+) -> None:
+    """Test that ask_question uses default TTL when ttl_seconds is None."""
+    captured = {}
+
+    def fake_notify(config, record):
+        captured["record"] = record
+        return True
+
+    ask_module = importlib.import_module("server.tools.ask_question")
+    monkeypatch.setattr(ask_module, "send_question_notification", fake_notify)
+
+    # Test with None TTL (should use default from config)
+    result = ask_question(
+        question="Question with default TTL?",
+        preset_answers=["Yes"],
+        ttl_seconds=None,
+        ctx=api_context(),
+    )
+
+    # Default TTL from test config is 120 seconds (see conftest.py)
+    assert result["expires_in_seconds"] == 120
+    
+    record = get_question_manager().get_question(result["question_id"])
+    assert record is not None
+    assert record.ttl_seconds == 120
+    assert captured["record"].ttl_seconds == 120
+
+
+def test_ask_question_without_ttl_parameter_uses_default(
+    monkeypatch: pytest.MonkeyPatch, api_context
+) -> None:
+    """Test that ask_question uses default TTL when ttl_seconds parameter is omitted."""
+    captured = {}
+
+    def fake_notify(config, record):
+        captured["record"] = record
+        return True
+
+    ask_module = importlib.import_module("server.tools.ask_question")
+    monkeypatch.setattr(ask_module, "send_question_notification", fake_notify)
+
+    # Test without TTL parameter (should use default from config)
+    result = ask_question(
+        question="Question without TTL param?",
+        preset_answers=["Yes"],
+        ctx=api_context(),
+    )
+
+    # Default TTL from test config is 120 seconds (see conftest.py)
+    assert result["expires_in_seconds"] == 120
+    
+    record = get_question_manager().get_question(result["question_id"])
+    assert record is not None
+    assert record.ttl_seconds == 120
+    assert captured["record"].ttl_seconds == 120
+
